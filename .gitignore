@@ -1,0 +1,135 @@
+# Environment Variables (NEVER commit secrets!)
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# Streamlit secrets (alternative to .env)
+.streamlit/secrets.toml
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebooks (if you add any)
+.ipynb_checkpoints
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Logs
+*.log
+logs/
+
+# Database Files (if using local SQLite for dev)
+*.db
+*.sqlite3
+
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# MacOS Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Local Data & Exports (don't commit user data)
+exports/
+data/
+uploads/
+*.csv
+*.xlsx
+!app/seed/products_seed.csv  # Keep the seed file
+
+# Documentation that shouldn't be public
+docs/deployment_notes.md
+docs/secrets.md
+
+# Local Configuration
+config.local.json
+settings.local.json
+
+# Supabase Local Development (if using Supabase CLI)
+supabase/.branches
+supabase/.temp
+.supabase/
+
+# Node modules (if you add any frontend tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python Virtual Environment Markers
+pyvenv.cfg
