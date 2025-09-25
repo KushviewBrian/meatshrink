@@ -1,5 +1,11 @@
 import streamlit as st, pandas as pd
+import sys
+import os
 from datetime import datetime, timedelta
+
+# Add the app directory to Python path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from lib.auth import require_auth, get_user_role, get_user_store_id
 from lib.db import filter_events
 from lib.charts import bar_cost_by_category, pareto_top_products, line_daily_trend, donut_event_mix

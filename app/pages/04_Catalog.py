@@ -1,4 +1,10 @@
 import streamlit as st, pandas as pd, csv, io
+import sys
+import os
+
+# Add the app directory to Python path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from lib.auth import require_auth, get_user_role, get_user_store_id
 from lib.supa import client
 

@@ -1,6 +1,12 @@
 import streamlit as st
 import pandas as pd
+import sys
+import os
 from datetime import datetime, timezone, time as time_type
+
+# Add the app directory to Python path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from lib.auth import require_auth, get_user_role, get_user_store_id
 from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
 from lib.validators import validate_weight, validate_prices, validate_datetime
