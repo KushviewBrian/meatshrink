@@ -5,37 +5,34 @@ import os
 from pathlib import Path
 from datetime import datetime, timezone, time as time_type
 
-# Fix imports for Streamlit Cloud deployment
+# Simplified import fix for Streamlit Cloud deployment
 def fix_imports():
     """Fix import paths for different deployment environments"""
     current_file = Path(__file__).resolve()
     
-    # Try different possible locations for the lib directory
-    possible_lib_dirs = [
-        current_file.parent / "lib",  # Same directory as this file
-        current_file.parent.parent / "app" / "lib",  # If we're in a subdirectory
-        Path("/mount/src") / "shrink_supabase_app" / "app" / "lib",  # Streamlit Cloud path
-        Path("/mount/src") / "app" / "lib",  # Alternative Streamlit Cloud path
-    ]
+    # Get the directory containing this file (should be /app)
+    app_dir = current_file.parent
+    lib_dir = app_dir / "lib"
     
-    lib_dir = None
-    for possible_dir in possible_lib_dirs:
-        if possible_dir.exists() and (possible_dir / "auth.py").exists():
-            lib_dir = possible_dir
-            break
+    # Check if lib directory exists in the expected location
+    if lib_dir.exists() and (lib_dir / "auth.py").exists():
+        # Add app directory to Python path if not already there
+        if str(app_dir) not in sys.path:
+            sys.path.insert(0, str(app_dir))
+        return lib_dir
     
-    if lib_dir is None:
-        raise ImportError("Could not find lib directory with auth.py")
+    # Fallback: try to find lib directory by walking up the directory tree
+    for parent in current_file.parents:
+        potential_lib = parent / "lib"
+        if potential_lib.exists() and (potential_lib / "auth.py").exists():
+            if str(parent) not in sys.path:
+                sys.path.insert(0, str(parent))
+            return potential_lib
     
-    # Add the parent directory of lib to sys.path
-    app_dir = lib_dir.parent
-    if str(app_dir) not in sys.path:
-        sys.path.insert(0, str(app_dir))
-    
-    return lib_dir
+    raise ImportError(f"Could not find lib directory with auth.py. Current file: {current_file}")
 
 try:
-    # Try to import directly first (might work in local development)
+    # Try to import directly first (works in most cases)
     from lib.auth import require_auth, get_user_role, get_user_store_id
     from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
     from lib.validators import validate_weight, validate_prices, validate_datetime
