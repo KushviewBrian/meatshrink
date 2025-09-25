@@ -6,26 +6,50 @@ from pathlib import Path
 from datetime import datetime, timezone, time as time_type
 
 # Fix imports for Streamlit Cloud deployment
-# Streamlit Cloud runs from /mount/src/{repo_name}/
-# We need to add the app directory to the Python path
+def fix_imports():
+    """Fix import paths for different deployment environments"""
+    current_file = Path(__file__).resolve()
+    
+    # Try different possible locations for the lib directory
+    possible_lib_dirs = [
+        current_file.parent / "lib",  # Same directory as this file
+        current_file.parent.parent / "app" / "lib",  # If we're in a subdirectory
+        Path("/mount/src") / "shrink_supabase_app" / "app" / "lib",  # Streamlit Cloud path
+        Path("/mount/src") / "app" / "lib",  # Alternative Streamlit Cloud path
+    ]
+    
+    lib_dir = None
+    for possible_dir in possible_lib_dirs:
+        if possible_dir.exists() and (possible_dir / "auth.py").exists():
+            lib_dir = possible_dir
+            break
+    
+    if lib_dir is None:
+        raise ImportError("Could not find lib directory with auth.py")
+    
+    # Add the parent directory of lib to sys.path
+    app_dir = lib_dir.parent
+    if str(app_dir) not in sys.path:
+        sys.path.insert(0, str(app_dir))
+    
+    return lib_dir
+
 try:
-    # Try to import directly first (might work in some setups)
+    # Try to import directly first (might work in local development)
     from lib.auth import require_auth, get_user_role, get_user_store_id
     from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
     from lib.validators import validate_weight, validate_prices, validate_datetime
 except ImportError:
     # If direct import fails, fix the path and try again
-    current_file = Path(__file__).resolve()
-    app_dir = current_file.parent
-    
-    # Add app directory to Python path
-    if str(app_dir) not in sys.path:
-        sys.path.insert(0, str(app_dir))
-    
-    # Now try importing again
-    from lib.auth import require_auth, get_user_role, get_user_store_id
-    from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
-    from lib.validators import validate_weight, validate_prices, validate_datetime
+    try:
+        lib_dir = fix_imports()
+        from lib.auth import require_auth, get_user_role, get_user_store_id
+        from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
+        from lib.validators import validate_weight, validate_prices, validate_datetime
+    except Exception as e:
+        st.error(f"Failed to import required modules: {e}")
+        st.error("Please check that all required files are present in the lib directory.")
+        st.stop()
 
 st.set_page_config(page_title="Record Shrink - Seaway Marketplace", layout="wide", initial_sidebar_state="collapsed")
 
