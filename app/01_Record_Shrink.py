@@ -2,14 +2,30 @@ import streamlit as st
 import pandas as pd
 import sys
 import os
+from pathlib import Path
 from datetime import datetime, timezone, time as time_type
 
-# Add the app directory to Python path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from lib.auth import require_auth, get_user_role, get_user_store_id
-from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
-from lib.validators import validate_weight, validate_prices, validate_datetime
+# Fix imports for Streamlit Cloud deployment
+# Streamlit Cloud runs from /mount/src/{repo_name}/
+# We need to add the app directory to the Python path
+try:
+    # Try to import directly first (might work in some setups)
+    from lib.auth import require_auth, get_user_role, get_user_store_id
+    from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
+    from lib.validators import validate_weight, validate_prices, validate_datetime
+except ImportError:
+    # If direct import fails, fix the path and try again
+    current_file = Path(__file__).resolve()
+    app_dir = current_file.parent
+    
+    # Add app directory to Python path
+    if str(app_dir) not in sys.path:
+        sys.path.insert(0, str(app_dir))
+    
+    # Now try importing again
+    from lib.auth import require_auth, get_user_role, get_user_store_id
+    from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
+    from lib.validators import validate_weight, validate_prices, validate_datetime
 
 st.set_page_config(page_title="Record Shrink - Seaway Marketplace", layout="wide", initial_sidebar_state="collapsed")
 

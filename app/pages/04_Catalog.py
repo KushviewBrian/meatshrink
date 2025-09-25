@@ -4,13 +4,23 @@ import os
 from pathlib import Path
 
 # Fix imports for Streamlit Cloud deployment
-# Add the parent directory (app) to the path so we can import lib modules
-current_dir = Path(__file__).parent
-app_dir = current_dir.parent
-sys.path.insert(0, str(app_dir))
-
-from lib.auth import require_auth, get_user_role, get_user_store_id
-from lib.supa import client
+try:
+    # Try direct import first
+    from lib.auth import require_auth, get_user_role, get_user_store_id
+    from lib.supa import client
+except ImportError:
+    # If direct import fails, fix the path and try again
+    current_file = Path(__file__).resolve()
+    pages_dir = current_file.parent
+    app_dir = pages_dir.parent
+    
+    # Add app directory to Python path
+    if str(app_dir) not in sys.path:
+        sys.path.insert(0, str(app_dir))
+    
+    # Now try importing again
+    from lib.auth import require_auth, get_user_role, get_user_store_id
+    from lib.supa import client
 
 st.set_page_config(page_title="Catalog", layout="wide")
 
