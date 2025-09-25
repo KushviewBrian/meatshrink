@@ -1,5 +1,14 @@
-import streamlit as st, pandas as pd
+import streamlit as st
+import pandas as pd
+import sys
+from pathlib import Path
 from datetime import datetime, timedelta
+
+# Fix imports for Streamlit Cloud deployment
+current_dir = Path(__file__).parent
+app_dir = current_dir.parent
+sys.path.insert(0, str(app_dir))
+
 from lib.auth import require_auth, get_user_role, get_user_store_id
 from lib.db import filter_events
 from lib.exports import export_and_upload

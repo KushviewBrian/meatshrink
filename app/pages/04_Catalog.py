@@ -1,9 +1,13 @@
 import streamlit as st, pandas as pd, csv, io
 import sys
 import os
+from pathlib import Path
 
-# Add the app directory to Python path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Fix imports for Streamlit Cloud deployment
+# Add the parent directory (app) to the path so we can import lib modules
+current_dir = Path(__file__).parent
+app_dir = current_dir.parent
+sys.path.insert(0, str(app_dir))
 
 from lib.auth import require_auth, get_user_role, get_user_store_id
 from lib.supa import client
