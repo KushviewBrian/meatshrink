@@ -36,6 +36,8 @@ try:
     from lib.auth import require_auth, get_user_role, get_user_store_id
     from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
     from lib.validators import validate_weight, validate_prices, validate_datetime
+    # Import OCR functionality
+    from lib.ocr import process_uploaded_image, display_extraction_results
 except ImportError:
     # If direct import fails, fix the path and try again
     try:
@@ -43,6 +45,7 @@ except ImportError:
         from lib.auth import require_auth, get_user_role, get_user_store_id
         from lib.db import list_products, list_event_types, insert_shrink_event, list_recent_events, create_correction
         from lib.validators import validate_weight, validate_prices, validate_datetime
+        from lib.ocr import process_uploaded_image, display_extraction_results
     except Exception as e:
         st.error(f"Failed to import required modules: {e}")
         st.error("Please check that all required files are present in the lib directory.")
@@ -194,33 +197,118 @@ st.markdown("""
 products = list_products(token)
 event_types = list_event_types(token)
 
-# Form container
+# Photo OCR Feature
+st.markdown('<div class="form-container">', unsafe_allow_html=True)
+st.subheader("📸 Quick Entry from Photo")
+
+# Camera/Upload interface
+col_photo1, col_photo2 = st.columns([2, 1])
+
+with col_photo1:
+    st.markdown("**Upload a photo of the meat label or scale tag:**")
+    uploaded_file = st.file_uploader(
+        "Choose image file",
+        type=['png', 'jpg', 'jpeg'],
+        help="Take a clear photo of the product label, scale tag, or barcode",
+        label_visibility="collapsed"
+    )
+    
+    # Camera input (mobile-friendly)
+    camera_image = st.camera_input(
+        "Or take a photo with your camera",
+        help="Point camera at the meat label or scale tag",
+        label_visibility="collapsed"
+    )
+
+# Process uploaded image
+ocr_data = {}
+if uploaded_file or camera_image:
+    image_to_process = camera_image if camera_image else uploaded_file
+    
+    with st.spinner("🔍 Processing image and extracting data..."):
+        ocr_result = process_uploaded_image(image_to_process)
+    
+    if ocr_result:
+        with col_photo2:
+            st.image(image_to_process, caption="Uploaded Image", width=200)
+        
+        # Show extraction results and get user corrections
+        ocr_data = display_extraction_results(ocr_result)
+        
+        # Button to auto-populate the form
+        if st.button("📝 Auto-Fill Form with Extracted Data", type="secondary", use_container_width=True):
+            # Store OCR data in session state to populate form fields
+            if ocr_data.get('weight_lbs'):
+                st.session_state['ocr_prefill_weight'] = ocr_data['weight_lbs']
+            if ocr_data.get('unit_price'):
+                st.session_state['ocr_prefill_unit_price'] = ocr_data['unit_price']
+            if ocr_data.get('unit_cost'):
+                st.session_state['ocr_prefill_unit_cost'] = ocr_data['unit_cost']
+            if ocr_data.get('category'):
+                st.session_state['ocr_prefill_category'] = ocr_data['category']
+            if ocr_data.get('product_name'):
+                st.session_state['ocr_prefill_product_name'] = ocr_data['product_name']
+            
+            st.success("✅ Form auto-filled with extracted data! Review and adjust below.")
+            st.rerun()
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Manual Entry Form (with OCR pre-fill capability)
 st.markdown('<div class="form-container">', unsafe_allow_html=True)
 st.subheader("📝 Record Shrink Event")
 
-# UI: Entry form with improved layout and larger dropdowns
+# UI: Entry form with OCR pre-fill integration
 col1, col2, col3 = st.columns([3, 2, 2])
 with col1:
     prod_options = {f"{p['category']} • {p['cut_name']} • {p['product_type']}": p for p in products}
-    prod_label = st.selectbox("🥩 Product", list(prod_options.keys()), key="fld_product_id", help="Select the meat product")
+    
+    # If OCR suggested a category and product name, try to find a match
+    default_product_index = 0
+    if st.session_state.get('ocr_prefill_category') and st.session_state.get('ocr_prefill_product_name'):
+        ocr_category = st.session_state['ocr_prefill_category']
+        ocr_product_name = st.session_state['ocr_prefill_product_name'].lower()
+        
+        # Find best matching product
+        for i, (display_name, product) in enumerate(prod_options.items()):
+            if (product['category'] == ocr_category and 
+                any(word in product['cut_name'].lower() for word in ocr_product_name.split()[:3])):
+                default_product_index = i
+                break
+    
+    prod_label = st.selectbox(
+        "🥩 Product", 
+        list(prod_options.keys()), 
+        index=default_product_index,
+        key="fld_product_id", 
+        help="Select the meat product (auto-suggested from photo if available)"
+    )
 
 with col2:
-    # Larger event type dropdown with better styling
     ev = st.selectbox("📋 Event Type", event_types, key="fld_event_type", 
                      help="Select the reason for shrink")
 
 with col3:
+    # Use OCR weight if available
+    default_weight = st.session_state.get('ocr_prefill_weight', 0.001)
     w = st.number_input("⚖️ Weight (lbs)", min_value=0.001, max_value=500.0, step=0.001, 
-                       format="%.3f", key="fld_weight_lbs", help="Enter weight in pounds")
+                       value=default_weight, format="%.3f", key="fld_weight_lbs", 
+                       help="Enter weight in pounds (auto-filled from photo if detected)")
 
 col4, col5, col6 = st.columns([2, 2, 3])
 with col4:
+    # Use OCR unit cost if available, otherwise try unit price as fallback
+    default_cost = st.session_state.get('ocr_prefill_unit_cost') or st.session_state.get('ocr_prefill_unit_price', 0.0)
     uc = st.number_input("💰 Unit Cost ($)", min_value=0.0, max_value=999.9999, step=0.01, 
-                        format="%.2f", key="fld_unit_cost", help="Cost per pound")
+                        value=default_cost, format="%.2f", key="fld_unit_cost", 
+                        help="Cost per pound (auto-filled from photo if detected)")
 
 with col5:
+    # Use OCR unit price if available
+    default_price = st.session_state.get('ocr_prefill_unit_price', 0.0)
     up = st.number_input("🏷️ Unit Price ($)", min_value=0.0, max_value=999.9999, step=0.01, 
-                        format="%.2f", key="fld_unit_price", help="Retail price per pound")
+                        value=default_price, format="%.2f", key="fld_unit_price", 
+                        help="Retail price per pound (auto-filled from photo if detected)")
 
 with col6:
     # Better date/time layout
@@ -231,6 +319,12 @@ with col6:
 notes = st.text_input("📝 Notes (optional)", key="fld_notes", help="Add any additional details")
 
 st.markdown('</div>', unsafe_allow_html=True)
+
+# Clear OCR session state after form is populated
+if any(key.startswith('ocr_prefill_') for key in st.session_state.keys()):
+    for key in list(st.session_state.keys()):
+        if key.startswith('ocr_prefill_'):
+            del st.session_state[key]
 
 # Submit button with better styling
 if st.button("🚀 Submit Shrink Event", type="primary", key="btn_submit_event", use_container_width=True):
